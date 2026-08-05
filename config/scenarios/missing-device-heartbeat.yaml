@@ -1,0 +1,32 @@
+schema_version: 2
+id: missing-device-heartbeat
+description: Heartbeats range from delayed to intermittently or continuously absent.
+phases:
+  - id: normal
+    duration_seconds: 120
+  - id: heartbeat-missing
+    duration_seconds: 180
+  - id: recovery
+    duration_seconds: 120
+variants:
+  mild:
+    incident_duration_multiplier: {min: 0.75, max: 0.95}
+    effects:
+      device:
+        availability: delayed
+        heartbeat_delay_seconds: {min: 12, max: 45}
+        rssi_dbm: -72
+  degraded:
+    incident_duration_multiplier: {min: 0.90, max: 1.15}
+    effects:
+      device:
+        availability: intermittent
+        heartbeat_delay_seconds: {min: 35, max: 95}
+        rssi_dbm: -82
+  severe:
+    incident_duration_multiplier: {min: 1.10, max: 1.35}
+    effects:
+      device:
+        availability: offline
+        heartbeat_delay_seconds: {min: 75, max: 180}
+        rssi_dbm: null

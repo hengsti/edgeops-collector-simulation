@@ -1,0 +1,46 @@
+schema_version: 2
+id: ingestion-backpressure
+description: Producer and consumer imbalance creates overlapping levels of queue pressure.
+phases:
+  - id: normal
+    duration_seconds: 120
+  - id: overloaded
+    duration_seconds: 180
+  - id: recovery
+    duration_seconds: 120
+variants:
+  mild:
+    incident_duration_multiplier: {min: 0.75, max: 0.95}
+    effects:
+      counter_rate_multipliers:
+        ingest_messages_enqueued_total: {min: 1.05, max: 1.25}
+        ingest_messages_processed_total: {min: 0.85, max: 1.05}
+      counter_rate_additions:
+        ingest_event_queue_full_total: {min: 0.00, max: 0.08}
+        ingest_wal_queue_full_total: {min: 0.00, max: 0.05}
+      service_logs:
+        ingestion-service: ["WARN transient queue pressure"]
+  degraded:
+    incident_duration_multiplier: {min: 0.90, max: 1.15}
+    effects:
+      counter_rate_multipliers:
+        ingest_messages_enqueued_total: {min: 1.20, max: 1.55}
+        ingest_messages_processed_total: {min: 0.55, max: 0.85}
+        ingest_persist_duration_seconds_sum: {min: 1.4, max: 2.5}
+      counter_rate_additions:
+        ingest_event_queue_full_total: {min: 0.05, max: 0.35}
+        ingest_wal_queue_full_total: {min: 0.03, max: 0.25}
+      service_logs:
+        ingestion-service: ["WARN sustained queue backpressure"]
+  severe:
+    incident_duration_multiplier: {min: 1.10, max: 1.35}
+    effects:
+      counter_rate_multipliers:
+        ingest_messages_enqueued_total: {min: 1.45, max: 1.90}
+        ingest_messages_processed_total: {min: 0.10, max: 0.50}
+        ingest_persist_duration_seconds_sum: {min: 2.0, max: 4.5}
+      counter_rate_additions:
+        ingest_event_queue_full_total: {min: 0.25, max: 0.80}
+        ingest_wal_queue_full_total: {min: 0.20, max: 0.70}
+      service_logs:
+        ingestion-service: ["ERROR event and WAL queues near capacity"]

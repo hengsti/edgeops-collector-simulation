@@ -1,0 +1,57 @@
+schema_version: 2
+id: influxdb-write-failure
+description: Influx writes range from slow success to a near-total unhealthy outage.
+phases:
+  - id: normal
+    duration_seconds: 120
+  - id: write-failure
+    duration_seconds: 180
+  - id: recovery
+    duration_seconds: 120
+variants:
+  mild:
+    incident_duration_multiplier: {min: 0.75, max: 0.95}
+    effects:
+      counter_rate_multipliers:
+        influx_write_duration_seconds_sum: {min: 1.4, max: 2.8}
+      counter_rate_additions:
+        influx_write_failed_total: {min: 0.00, max: 0.03}
+        wal_forwarder_retry_total: {min: 0.00, max: 0.08}
+      gauge_values:
+        influxdb_healthy: 1
+        wal_forwarder_retry_outage_active: 0
+      service_logs:
+        influxdb: ["WARN simulated slow writes"]
+  degraded:
+    incident_duration_multiplier: {min: 0.90, max: 1.15}
+    effects:
+      counter_rate_multipliers:
+        influx_lines_written_total: {min: 0.35, max: 0.75}
+        influx_write_success_total: {min: 0.30, max: 0.75}
+        wal_forwarder_committed_total: {min: 0.35, max: 0.80}
+      counter_rate_additions:
+        influx_write_failed_total: {min: 0.03, max: 0.15}
+        wal_forwarder_retry_total: {min: 0.15, max: 0.60}
+        wal_forwarder_commit_retry_total: {min: 0.03, max: 0.20}
+      gauge_values:
+        influxdb_healthy: {min: 0.75, max: 1.00}
+        wal_forwarder_retry_outage_active: {min: 0.30, max: 0.75}
+      service_logs:
+        influxdb: ["ERROR intermittent simulated write failure"]
+  severe:
+    incident_duration_multiplier: {min: 1.10, max: 1.35}
+    effects:
+      counter_rate_multipliers:
+        influx_lines_written_total: {min: 0.00, max: 0.30}
+        influx_write_success_total: {min: 0.00, max: 0.25}
+        wal_forwarder_committed_total: {min: 0.00, max: 0.30}
+      counter_rate_additions:
+        influx_write_failed_total: {min: 0.10, max: 0.35}
+        wal_forwarder_retry_total: {min: 0.50, max: 1.40}
+        wal_forwarder_commit_retry_total: {min: 0.15, max: 0.55}
+        wal_forwarder_drop_total: {min: 0.05, max: 0.35}
+      gauge_values:
+        influxdb_healthy: {min: 0.40, max: 0.90}
+        wal_forwarder_retry_outage_active: 1
+      service_logs:
+        influxdb: ["ERROR simulated InfluxDB outage"]
