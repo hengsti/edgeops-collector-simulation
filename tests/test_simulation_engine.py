@@ -109,6 +109,68 @@ async def test_device_read_advances_time_and_recovers_with_consistent_age(
     assert recovery.data.heartbeat_age_seconds < incident.data.heartbeat_age_seconds
 
 
+@pytest.mark.parametrize("speed", [1, 50, 100])
+async def test_accelerated_counters_use_simulated_elapsed_seconds(
+    settings: Settings, speed: int
+) -> None:
+    clock = FakeClock()
+    engine = build_engine(settings, clock)
+    await engine.start_run(
+        SimulationRunRequest(scenario_id="ingestion-backpressure", seed=42, speed=speed)
+    )
+    before = await engine.get_ingestion_metrics()
+    clock.advance(5 / speed)
+    after = await engine.get_ingestion_metrics()
+    elapsed = (after.metadata.captured_at - before.metadata.captured_at).total_seconds()
+    assert elapsed == pytest.approx(5)
+    rate = (
+        after.data.ingest_messages_enqueued_total - before.data.ingest_messages_enqueued_total
+    ) / elapsed
+    assert 2 <= rate <= 9
+
+
+async def test_healthy_device_age_advances_between_periodic_readings(settings: Settings) -> None:
+    clock = FakeClock()
+    engine = build_engine(settings, clock)
+    await engine.start_run(
+        SimulationRunRequest(scenario_id="missing-device-heartbeat", seed=42, speed=10)
+    )
+    for advance, expected_age in [(0.05, 0.5), (0.1, 1.5), (0.1, 0.5)]:
+        clock.advance(advance)
+        device = await engine.get_device(settings.device_id)
+        repeated = await engine.get_device(settings.device_id)
+        assert device.data.available is True
+        assert device.data.heartbeat_age_seconds == pytest.approx(expected_age)
+        assert repeated == device
+        assert (
+            device.metadata.captured_at - device.data.last_seen
+        ).total_seconds() == pytest.approx(expected_age)
+
+
+@pytest.mark.parametrize("finish_run", [False, True])
+async def test_timestamps_stay_monotonic_after_accelerated_run(
+    settings: Settings, finish_run: bool
+) -> None:
+    clock = FakeClock()
+    engine = build_engine(settings, clock)
+    await engine.start_run(
+        SimulationRunRequest(scenario_id="ingestion-backpressure", seed=42, speed=100)
+    )
+    clock.advance(0.5)
+    before = await engine.get_ingestion_metrics()
+    if finish_run:
+        clock.advance(10)
+    else:
+        await engine.stop_run()
+    after = await engine.get_ingestion_metrics()
+    clock.advance(1)
+    idle = await engine.get_ingestion_metrics()
+    assert after.metadata.captured_at >= before.metadata.captured_at
+    assert (
+        idle.metadata.captured_at - after.metadata.captured_at
+    ).total_seconds() == pytest.approx(1)
+
+
 async def test_counters_are_monotonic_and_queue_is_bounded(settings: Settings) -> None:
     clock = FakeClock()
     engine = build_engine(settings, clock)

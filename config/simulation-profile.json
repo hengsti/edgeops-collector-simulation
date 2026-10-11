@@ -1,5 +1,6 @@
 {
   "base_message_rate": 5.0,
+  "heartbeat_interval_seconds": 2.0,
   "queue_initial_depth": 20.0,
   "queue_capacity": 1000.0,
   "services": {

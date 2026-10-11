@@ -16,6 +16,7 @@ class SimulationProfile(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     base_message_rate: float = Field(gt=0, allow_inf_nan=False)
+    heartbeat_interval_seconds: float = Field(default=2.0, gt=0, allow_inf_nan=False)
     queue_initial_depth: float = Field(ge=0, allow_inf_nan=False)
     queue_capacity: float = Field(gt=0, allow_inf_nan=False)
     services: dict[str, SimulatedService]

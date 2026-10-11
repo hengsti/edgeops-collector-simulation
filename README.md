@@ -63,12 +63,21 @@ populated through `normal`, the incident phase, and the full explicit `recovery`
 - Numeric ranges resolve once from SHA-256-derived random streams.
 - Workload scale is sampled once from `[0.65, 1.50]`.
 - A fixed one-second simulated step uses correlated workload noise.
+- Observation timestamps advance in simulated seconds, so `speed` accelerates collection
+  without inflating the per-second rates used by the ML model.
+- Healthy heartbeat ages cycle between readings, using the profile's
+  `heartbeat_interval_seconds` (default `2.0`, matching the ESP32 publishing interval).
+  Incident delay is added to that age; it is not the only source of nonzero heartbeat age.
 - Normal windows include seeded label-independent nuisance events.
 - Incident effects ramp during the first 20% of the incident.
 - Recovery interpolates for 60% of its phase while preserving the `recovery` provenance.
 - Counters remain monotonic and queues use conservation with bounded depth.
 - Optional A2 groups are masked per run at 15%, with at most three groups; keys remain present as
   `null`, while required A1 fields are never masked.
+
+Restart or rebuild this collector before retraining model version 0.4. Regenerate old datasets:
+the previous always-zero healthy heartbeat ages and wall-clock rate timestamps cannot be
+corrected by changing a CSV schema or model version string.
 
 ## Postman
 

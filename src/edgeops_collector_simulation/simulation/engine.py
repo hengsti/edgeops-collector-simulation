@@ -135,6 +135,8 @@ class SimulationEngine:
         self._scenarios = scenarios
         self._clock = clock
         self._clock_origin = clock()
+        self._timestamp_tick = self._clock_origin
+        self._timestamp_seconds = 0.0
         self._last_idle_tick = self._clock_origin
         self._lock = asyncio.Lock()
         self._active_run: ActiveRun | None = None
@@ -151,7 +153,11 @@ class SimulationEngine:
         }
 
     def _now(self) -> datetime:
-        return SIMULATION_EPOCH + timedelta(seconds=self._clock() - self._clock_origin)
+        tick = self._clock()
+        speed = self._active_run.speed if self._active_run else 1.0
+        self._timestamp_seconds += (tick - self._timestamp_tick) * speed
+        self._timestamp_tick = tick
+        return SIMULATION_EPOCH + timedelta(seconds=self._timestamp_seconds)
 
     def _phase(self, run: ActiveRun) -> tuple[str, float] | None:
         elapsed = run.completed_steps
@@ -267,6 +273,7 @@ class SimulationEngine:
                 self._gauges[name] = min(1.0, max(0.0, resolved))
             run.completed_steps += 1
         if run.completed_steps >= total:
+            self._now()
             self._active_run = None
             self._last_idle_tick = self._clock()
 
@@ -376,6 +383,7 @@ class SimulationEngine:
                 return None
             phase = self._phase(run)
             state = self._run_state(run, phase[0]) if phase else None
+            self._now()
             self._active_run = None
             self._last_idle_tick = self._clock()
             return state
@@ -477,7 +485,9 @@ class SimulationEngine:
             else:
                 available = True
             configured_delay = float(device.get("heartbeat_delay_seconds", 0.0)) if device else 0.0
-            delay = configured_delay * strength
+            # Healthy devices publish periodically; zero age on every read leaks the label.
+            elapsed = (self._now() - SIMULATION_EPOCH).total_seconds()
+            delay = elapsed % self._profile.heartbeat_interval_seconds + configured_delay * strength
             if not available and run is not None:
                 incident_start = run.scenario.phases[0].duration_seconds
                 delay = max(delay, float(run.completed_steps - incident_start))
