@@ -19,7 +19,7 @@ variants:
         ingest_event_queue_full_total: {min: 0.00, max: 0.08}
         ingest_wal_queue_full_total: {min: 0.00, max: 0.05}
       service_logs:
-        ingestion-service: ["WARN transient queue pressure"]
+        ingest: ["WARN transient queue pressure"]
   degraded:
     incident_duration_multiplier: {min: 0.90, max: 1.15}
     effects:
@@ -31,7 +31,7 @@ variants:
         ingest_event_queue_full_total: {min: 0.05, max: 0.35}
         ingest_wal_queue_full_total: {min: 0.03, max: 0.25}
       service_logs:
-        ingestion-service: ["WARN sustained queue backpressure"]
+        ingest: ["WARN sustained queue backpressure"]
   severe:
     incident_duration_multiplier: {min: 1.10, max: 1.35}
     effects:
@@ -43,4 +43,4 @@ variants:
         ingest_event_queue_full_total: {min: 0.25, max: 0.80}
         ingest_wal_queue_full_total: {min: 0.20, max: 0.70}
       service_logs:
-        ingestion-service: ["ERROR event and WAL queues near capacity"]
+        ingest: ["ERROR event and WAL queues near capacity"]
