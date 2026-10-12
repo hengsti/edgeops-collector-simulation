@@ -22,8 +22,7 @@ class Settings(BaseSettings):
     scenario_path: Path = Path("config/scenarios")
     device_id: str = "esp32-simulated-01"
     allowed_services: str = (
-        "nanomq,ingestion-service,influxdb,telegraf,grafana,device-management,"
-        "control-ui,homekit-api"
+        "emqx,ingest,influxdb,telegraf,grafana,device-management,control-ui,apple-homekit-api"
     )
 
     @model_validator(mode="after")
