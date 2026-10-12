@@ -1,0 +1,76 @@
+schema_version: 2
+id: mqtt-broker-unavailable
+description: The EMQX broker degrades or stops, so device heartbeats go stale and inbound traffic drops.
+phases:
+  - id: normal
+    duration_seconds: 120
+  - id: broker-down
+    duration_seconds: 180
+  - id: recovery
+    duration_seconds: 120
+variants:
+  mild:
+    incident_duration_multiplier: {min: 0.75, max: 0.95}
+    effects:
+      service_states:
+        emqx: {status: running, health: unhealthy}
+      counter_rate_multipliers:
+        mqtt_messages_received_total: &mild_traffic {min: 0.30, max: 0.60}
+        ingest_decode_success_total: *mild_traffic
+        ingest_messages_enqueued_total: *mild_traffic
+        ingest_messages_processed_total: *mild_traffic
+        ingest_transform_success_total: *mild_traffic
+        influx_lines_written_total: *mild_traffic
+        influx_write_success_total: *mild_traffic
+        ingest_pipeline_duration_seconds_sum: *mild_traffic
+        ingest_pipeline_duration_seconds_count: *mild_traffic
+      device:
+        availability: delayed
+        heartbeat_delay_seconds: {min: 12, max: 45}
+        rssi_dbm: -51
+      service_logs:
+        emqx: ["WARN health check failed: listener tcp:default not responding"]
+        ingest: ["WARN MQTT client reconnecting to emqx"]
+  degraded:
+    incident_duration_multiplier: {min: 0.90, max: 1.15}
+    effects:
+      service_states:
+        emqx: {status: restarting, health: null}
+      counter_rate_multipliers:
+        mqtt_messages_received_total: &degraded_traffic {min: 0.05, max: 0.25}
+        ingest_decode_success_total: *degraded_traffic
+        ingest_messages_enqueued_total: *degraded_traffic
+        ingest_messages_processed_total: *degraded_traffic
+        ingest_transform_success_total: *degraded_traffic
+        influx_lines_written_total: *degraded_traffic
+        influx_write_success_total: *degraded_traffic
+        ingest_pipeline_duration_seconds_sum: *degraded_traffic
+        ingest_pipeline_duration_seconds_count: *degraded_traffic
+      device:
+        availability: intermittent
+        heartbeat_delay_seconds: {min: 35, max: 95}
+        rssi_dbm: -51
+      service_logs:
+        emqx: ["ERROR broker crashed, container restarting"]
+        ingest: ["ERROR MQTT connection to emqx lost"]
+  severe:
+    incident_duration_multiplier: {min: 1.10, max: 1.35}
+    effects:
+      service_states:
+        emqx: {status: exited, health: null}
+      counter_rate_multipliers:
+        mqtt_messages_received_total: &severe_traffic {min: 0.0, max: 0.02}
+        ingest_decode_success_total: *severe_traffic
+        ingest_messages_enqueued_total: *severe_traffic
+        ingest_messages_processed_total: *severe_traffic
+        ingest_transform_success_total: *severe_traffic
+        influx_lines_written_total: *severe_traffic
+        influx_write_success_total: *severe_traffic
+        ingest_pipeline_duration_seconds_sum: *severe_traffic
+        ingest_pipeline_duration_seconds_count: *severe_traffic
+      device:
+        availability: offline
+        heartbeat_delay_seconds: {min: 75, max: 180}
+        rssi_dbm: -51
+      service_logs:
+        ingest: ["ERROR MQTT connection to emqx refused"]
