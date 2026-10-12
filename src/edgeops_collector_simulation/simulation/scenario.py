@@ -38,6 +38,13 @@ class DeviceEffect(BaseModel):
     rssi_dbm: int | None = None
 
 
+class ServiceStateEffect(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: str = Field(min_length=1)
+    health: str | None = None
+
+
 class ScenarioEffects(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -46,6 +53,7 @@ class ScenarioEffects(BaseModel):
     gauge_values: dict[str, NumericEffect] = Field(default_factory=dict)
     device: DeviceEffect | None = None
     service_logs: dict[str, list[str]] = Field(default_factory=dict)
+    service_states: dict[str, ServiceStateEffect] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_names(self) -> "ScenarioEffects":
@@ -132,6 +140,9 @@ def resolve_effects(effects: ScenarioEffects, rng: random.Random) -> dict[str, o
             for name, value in sorted(effects.gauge_values.items())
         },
         "service_logs": {name: list(lines) for name, lines in sorted(effects.service_logs.items())},
+        "service_states": {
+            name: state.model_dump() for name, state in sorted(effects.service_states.items())
+        },
     }
     if effects.device is not None:
         resolved["device"] = {
@@ -173,7 +184,7 @@ class ScenarioRepository:
             referenced = {
                 service
                 for variant in scenario.variants.values()
-                for service in variant.effects.service_logs
+                for service in (*variant.effects.service_logs, *variant.effects.service_states)
             }
             unknown = sorted(referenced - allowed_services)
             if unknown:
