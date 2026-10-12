@@ -15,6 +15,7 @@ from edgeops_collector_simulation.schemas import INGESTION_COUNTER_NAMES, Simula
             "influxdb-write-failure",
             "malformed-sensor-payload",
             "missing-device-heartbeat",
+            "mqtt-broker-unavailable",
         )
         for variant in ("mild", "degraded", "severe")
     ],
@@ -107,6 +108,68 @@ async def test_device_read_advances_time_and_recovers_with_consistent_age(
     assert recovery.metadata.simulation_phase == "recovery"
     assert recovery.data.heartbeat_age_seconds is not None
     assert recovery.data.heartbeat_age_seconds < incident.data.heartbeat_age_seconds
+
+
+@pytest.mark.parametrize(
+    ("variant_id", "status", "health"),
+    [
+        ("mild", "running", "unhealthy"),
+        ("degraded", "restarting", None),
+        ("severe", "exited", None),
+    ],
+)
+async def test_broker_outage_overrides_emqx_state_only_during_incident(
+    settings: Settings, variant_id: str, status: str, health: str | None
+) -> None:
+    clock = FakeClock()
+    engine = build_engine(settings, clock)
+    state = await engine.start_run(
+        SimulationRunRequest(scenario_id="mqtt-broker-unavailable", seed=42, variant_id=variant_id)
+    )
+    normal = await engine.get_service("emqx")
+    clock.advance(150)
+    incident = await engine.get_service("emqx")
+    others = await engine.get_service("ingest")
+    incident_duration = 180 * float(state.resolved_effects["incident_duration_multiplier"])
+    clock.advance(incident_duration + 15)
+    recovery = await engine.get_service("emqx")
+
+    assert (normal.data.status, normal.data.health) == ("running", "healthy")
+    assert incident.metadata.simulation_phase == "broker-down"
+    assert (incident.data.status, incident.data.health) == (status, health)
+    assert (others.data.status, others.data.health) == ("running", "healthy")
+    assert recovery.metadata.simulation_phase == "recovery"
+    assert (recovery.data.status, recovery.data.health) == ("running", "healthy")
+
+
+async def test_severe_broker_outage_stops_inbound_traffic(settings: Settings) -> None:
+    clock = FakeClock()
+    engine = build_engine(settings, clock)
+    await engine.start_run(
+        SimulationRunRequest(scenario_id="mqtt-broker-unavailable", seed=42, variant_id="severe")
+    )
+    clock.advance(10)
+    normal_start = await engine.get_ingestion_metrics()
+    clock.advance(60)
+    normal_end = await engine.get_ingestion_metrics()
+    clock.advance(90)
+    outage_start = await engine.get_ingestion_metrics()
+    clock.advance(60)
+    outage_end = await engine.get_ingestion_metrics()
+    device = await engine.get_device(settings.device_id)
+
+    normal_traffic = (
+        normal_end.data.ingest_messages_enqueued_total
+        - normal_start.data.ingest_messages_enqueued_total
+    )
+    outage_traffic = (
+        outage_end.data.ingest_messages_enqueued_total
+        - outage_start.data.ingest_messages_enqueued_total
+    )
+
+    assert outage_end.metadata.simulation_phase == "broker-down"
+    assert outage_traffic < 0.05 * normal_traffic
+    assert device.data.available is False
 
 
 @pytest.mark.parametrize("speed", [1, 50, 100])

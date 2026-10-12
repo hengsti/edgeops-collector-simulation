@@ -36,7 +36,7 @@ def test_admin_routes_always_exist_and_use_admin_key(client: TestClient) -> None
     assert client.get(route, headers={"X-EdgeOps-Key": "read-test-key"}).status_code == 401
     response = client.get(route, headers={"X-EdgeOps-Key": "admin-test-key"})
     assert response.status_code == 200
-    assert len(response.json()) == 4
+    assert len(response.json()) == 5
 
 
 def test_run_api_status_codes_and_provenance(client: TestClient) -> None:

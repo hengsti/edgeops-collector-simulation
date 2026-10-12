@@ -18,7 +18,7 @@ def test_all_scenarios_use_contract_v2_and_all_variants(settings: Settings) -> N
         allowed_services=settings.allowed_service_names,
     )
     summaries = repository.list()
-    assert len(summaries) == 4
+    assert len(summaries) == 5
     assert all(item.variants == ["degraded", "mild", "severe"] for item in summaries)
     assert all(item.phases[0] == "normal" and item.phases[-1] == "recovery" for item in summaries)
 
