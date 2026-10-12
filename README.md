@@ -71,6 +71,8 @@ populated through `normal`, the incident phase, and the full explicit `recovery`
 - Normal windows include seeded label-independent nuisance events.
 - Incident effects ramp during the first 20% of the incident.
 - Recovery interpolates for 60% of its phase while preserving the `recovery` provenance.
+- `service_states` effects (for example `emqx: {status: exited, health: null}`) replace a
+  service's profile status and health for the whole incident phase only.
 - Counters remain monotonic and queues use conservation with bounded depth.
 - Optional A2 groups are masked per run at 15%, with at most three groups; keys remain present as
   `null`, while required A1 fields are never masked.
