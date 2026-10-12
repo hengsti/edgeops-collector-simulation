@@ -4,13 +4,13 @@
   "queue_initial_depth": 20.0,
   "queue_capacity": 1000.0,
   "services": {
-    "nanomq": {"status": "running", "health": "healthy", "restart_count": 0},
-    "ingestion-service": {"status": "running", "health": "healthy", "restart_count": 0},
+    "emqx": {"status": "running", "health": "healthy", "restart_count": 0},
+    "ingest": {"status": "running", "health": "healthy", "restart_count": 0},
     "influxdb": {"status": "running", "health": "healthy", "restart_count": 0},
     "telegraf": {"status": "running", "health": "healthy", "restart_count": 0},
     "grafana": {"status": "running", "health": "healthy", "restart_count": 0},
     "device-management": {"status": "running", "health": "healthy", "restart_count": 0},
     "control-ui": {"status": "running", "health": "healthy", "restart_count": 0},
-    "homekit-api": {"status": "running", "health": "healthy", "restart_count": 0}
+    "apple-homekit-api": {"status": "running", "health": "healthy", "restart_count": 0}
   }
 }
