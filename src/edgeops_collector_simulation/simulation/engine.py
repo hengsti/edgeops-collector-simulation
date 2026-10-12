@@ -413,12 +413,18 @@ class SimulationEngine:
         if service not in self._settings.allowed_service_names:
             raise ResourceNotFoundError(f"Service is not allowlisted: {service}")
         configured = self._profile.services[service]
-        health = configured.health
+        status, health = configured.status, configured.health
         if service == "influxdb" and self._gauges["influxdb_healthy"] < 0.5:
             health = "unhealthy"
+        run = self._active_run
+        phase = self._phase(run) if run else None
+        if run and phase and phase[0] == run.scenario.incident_phase.id:
+            override = run.resolved_effects.get("service_states", {}).get(service)
+            if override:
+                status, health = override["status"], override["health"]
         return ServiceState(
             service=service,
-            status=configured.status,
+            status=status,
             health=health,
             restart_count=configured.restart_count,
         )
